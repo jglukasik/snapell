@@ -1,9 +1,14 @@
 import Data.Char
-import qualified Data.ByteString.Lazy.Char8 as B
-import Crypto.Hash.SHA256
-
 import Data.Digest.Pure.SHA
+import Data.Time.Clock.POSIX
+import qualified Data.ByteString.Lazy.Char8 as B
 
+main :: IO ()
+main = do
+  time <- fmap show timestamp
+  putStrLn $ requestToken staticToken time
+
+staticToken = "m198sOkJEn37DjqZ32lpRu76xmw288xSQ9"
 
 requestToken :: String -> String -> String
 requestToken auth time= 
@@ -15,7 +20,6 @@ requestToken auth time=
   in
     join pattern first second
 
-
 snapHash :: String -> String -> String
 snapHash first second = showDigest ( sha256 ( B.pack (first ++ second)))
 
@@ -26,4 +30,5 @@ join (p:ps) (a:as) (b:bs)
   | p == '1' = b : join ps as bs
   | otherwise = "invalid input"
 
-
+timestamp :: IO Integer
+timestamp = fmap round getPOSIXTime
