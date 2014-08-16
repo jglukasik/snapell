@@ -1,14 +1,26 @@
+{-# LANGUAGE OverloadedStrings, DeriveGeneric #-}
+
 import Data.Char
+import Data.Maybe
 import Data.Digest.Pure.SHA
 import Data.Time.Clock.POSIX
 import Data.ByteString.Internal
 import qualified Data.ByteString.Lazy.Char8 as B
---import Data.Aeson
+import Data.Aeson
+import Network.Curl
+import Network.Curl.Aeson
+import Control.Applicative
+import Control.Monad
+import GHC.Generics
+import Credentials
 
 main :: IO ()
 main = do
-  time <- fmap show timestamp
-  putStrLn $ requestToken staticToken time
+  time <- getTime
+  let myToken = requestToken staticToken (show time)
+  let myLogin = Login {username=myUsername, password=myPassword, timestamp=time, token=myToken}
+  reply <- getReply myLogin
+  putStrLn $ show reply
 
 staticToken = "m198sOkJEn37DjqZ32lpRu76xmw288xSQ9"
 apiURL = "feelinsonice.appspot.com"
@@ -21,41 +33,43 @@ requestToken auth time=
     first = snapHash secret auth
     second = snapHash time secret
   in
-    join pattern first second
+    snapJoin pattern first second
 
 snapHash :: String -> String -> String
-snapHash first second = showDigest ( sha256 ( B.pack ( map (first ++ second))))
+snapHash first second = showDigest ( sha256 ( B.pack (first ++ second)))
 
-join :: String -> String -> String -> String
-join [] _ _ = []
-join (p:ps) (a:as) (b:bs)
-  | p == '0' = a : join ps as bs
-  | p == '1' = b : join ps as bs
+snapJoin :: String -> String -> String -> String
+snapJoin [] _ _ = []
+snapJoin (p:ps) (a:as) (b:bs)
+  | p == '0' = a : snapJoin ps as bs
+  | p == '1' = b : snapJoin ps as bs
   | otherwise = "invalid input"
 
-timestamp :: IO Integer
-timestamp = fmap round getPOSIXTime
+getTime :: IO Integer
+getTime = fmap round getPOSIXTime
 
---data Login =
---  Login 
---    { username  :: String
---    , password  :: String
---    , timestamp :: Integer
---    , token     :: String
---    } deriving Show
---
---instance ToJSON Login where
---  toJSON (Login username password timestamp token) =
---    object [ "username"   .= username
---           , "password"   .= password
---           , "timestamp"  .= timestamp
---           , "token"      .= token
---           ]
+data Login =
+  Login 
+    { username  :: String
+    , password  :: String
+    , timestamp :: Integer
+    , token     :: String
+    } deriving (Show,Generic)
+instance FromJSON Login
+instance ToJSON Login
 
+data Reply =
+  Reply 
+    { bests     :: String
+    , auth_token:: String
+    } deriving (Show,Generic)
+instance FromJSON Reply
+instance ToJSON Reply
 
+getReply :: (ToJSON a) => Maybe a -> IO Reply
+getReply myLogin = curlAeson parseJSON "post" apiURL opts myLogin
 
---logMeIn = curlAeson "post" apiURL [] 
-
+opts = [ CurlConnectTimeout 5, CurlTimeout 10, CurlUserAgent "Snapchat/4.1.07 (Nexus 4; Android 18; gzip)"]
 
 
 
