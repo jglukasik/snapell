@@ -23,7 +23,7 @@ main = do
   putStrLn $ show reply
 
 staticToken = "m198sOkJEn37DjqZ32lpRu76xmw288xSQ9"
-apiURL = "feelinsonice.appspot.com"
+apiURL = "https://feelinsonice-hrd.appspot.com/bq/login"
 
 requestToken :: String -> String -> String
 requestToken auth time= 
@@ -60,16 +60,12 @@ instance ToJSON Login
 
 data Reply =
   Reply 
-    { bests     :: String
-    , auth_token:: String
+    { score :: Integer
     } deriving (Show,Generic)
 instance FromJSON Reply
 instance ToJSON Reply
 
-getReply :: (ToJSON a) => Maybe a -> IO Reply
-getReply myLogin = curlAeson parseJSON "post" apiURL opts myLogin
+getReply :: Login -> IO Reply
+getReply myLogin = curlAeson parseJSON "post" apiURL opts (return myLogin)
 
 opts = [ CurlConnectTimeout 5, CurlTimeout 10, CurlUserAgent "Snapchat/4.1.07 (Nexus 4; Android 18; gzip)"]
-
-
-
