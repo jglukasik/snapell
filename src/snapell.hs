@@ -60,7 +60,7 @@ instance ToJSON Login
 
 data Reply =
   Reply 
-    { score :: Integer
+    { message :: String
     } deriving (Show,Generic)
 instance FromJSON Reply
 instance ToJSON Reply
